@@ -9,7 +9,7 @@ Globals:
     MemorySize: 2048 # Asignamos más memoria para acelerar el Cold Start inicial de Spring
     Timeout: 30
     Architectures:
-      - arm64
+      - x86_64
     Environment:
       Variables:
         MAIN_CLASS: com.productos.ProductApplication
