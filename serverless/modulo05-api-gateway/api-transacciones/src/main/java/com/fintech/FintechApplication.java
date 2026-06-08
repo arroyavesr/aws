@@ -21,25 +21,39 @@ public class FintechApplication {
     public Function<Message<TransactionRequest>, Message<Map<String, Object>>> processTransaction() {
         return message -> {
             TransactionRequest request = message.getPayload();
+            Map<String, Object> body = new HashMap<>();
 
-            // Extraer cabecera HTTP de auditoría inyectada por API Gateway
-            String auditSource = "NO_PROVISTO";
-            if (message.getHeaders().containsKey("x-audit-source")) {
-                auditSource = message.getHeaders().get("x-audit-source").toString();
+            // Extraer headers de auditoría
+            String auditSource = message.getHeaders().getOrDefault("x-audit-source", "NO_PROVISTO").toString();
+
+            // Extraer query string parameters inyectados por API Gateway en el Message Header
+            // API Gateway HttpApi v2 introduce los query parameters en una cabecera u objeto mapa.
+            // Spring mapea estas variables en la cabecera "queryParameters".
+            boolean forceReject = false;
+            if (message.getHeaders().containsKey("queryParameters")) {
+                Map<?, ?> queryParams = (Map<?, ?>) message.getHeaders().get("queryParameters");
+                if (queryParams != null && queryParams.containsKey("forceReject")) {
+                    forceReject = Boolean.parseBoolean(queryParams.get("forceReject").toString());
+                }
             }
 
-            // Procesar transacción ficticia
-            String transactionId = UUID.randomUUID().toString();
+            if (forceReject) {
+                body.put("estado", "RECHAZADA");
+                body.put("motivo", "Transacción forzada a rechazo");
+                return MessageBuilder.withPayload(body)
+                        .setHeader("statusCode", 400)
+                        .setHeader("Content-Type", "application/json")
+                        .build();
+            }
 
-            Map<String, Object> body = new HashMap<>();
+            String transactionId = UUID.randomUUID().toString();
             body.put("transactionId", transactionId);
             body.put("estado", "APROBADA");
             body.put("origenAuditoria", auditSource);
             body.put("montoProcesado", request.getAmount());
 
-            // Construir respuesta HTTP con headers personalizados
             return MessageBuilder.withPayload(body)
-                    .setHeader("statusCode", 201) // Código HTTP de respuesta
+                    .setHeader("statusCode", 201)
                     .setHeader("Content-Type", "application/json")
                     .setHeader("X-Custom-Response-Header", "ProcesadoPorSpring21")
                     .build();

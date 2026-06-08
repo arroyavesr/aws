@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  HTTP API Gateway linked to Spring Cloud Function.
+
+Globals:
+  Function:
+    Runtime: java21
+    MemorySize: 1536
+    Timeout: 20
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        MAIN_CLASS: com.fintech.FintechApplication
+        SPRING_CLOUD_FUNCTION_DEFINITION: processTransaction
+
+Resources:
+  HttpApiGateway:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - POST
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "content-type"
+          - "x-audit-source"
+
+  TransaccionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: api-transacciones/
+      Handler: org.springframework.cloud.function.adapter.aws.FunctionInvoker::handleRequest
+      Events:
+        PostRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApiGateway
+            Path: /transacciones
+            Method: post
+
+Outputs:
+  ApiUrl:
+    Description: URL Base de la HTTP API Gateway
+    Value: !Sub "https://${HttpApiGateway}.execute-api.${AWS::Region}.amazonaws.com/transacciones"
