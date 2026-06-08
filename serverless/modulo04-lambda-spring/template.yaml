@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Spring Boot REST Payload integration in Lambda.
+
+Globals:
+  Function:
+    Runtime: java21
+    MemorySize: 2048 # Asignamos más memoria para acelerar el Cold Start inicial de Spring
+    Timeout: 30
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        MAIN_CLASS: com.productos.ProductApplication
+        SPRING_CLOUD_FUNCTION_DEFINITION: processProduct
+        SPRING_MAIN_LAZY_INITIALIZATION: "true" # Habilitamos carga perezosa para optimizar arranque
+
+Resources:
+  ProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: api-productos/
+      Handler: org.springframework.cloud.function.adapter.aws.FunctionInvoker::handleRequest
